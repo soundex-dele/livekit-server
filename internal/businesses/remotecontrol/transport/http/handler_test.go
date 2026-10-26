@@ -1,6 +1,10 @@
-package remote
+package remotehttp
 
 import (
+	"av-platform/business/internal/businesses/remotecontrol/application"
+	"av-platform/business/internal/businesses/remotecontrol/domain"
+	infra "av-platform/business/internal/businesses/remotecontrol/infrastructure"
+	"av-platform/business/internal/platform/media"
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -19,7 +23,7 @@ type fakeMedia struct {
 	deleted []string
 }
 
-func (f *fakeMedia) Connect(_ context.Context, s Session, role string) (map[string]any, error) {
+func (f *fakeMedia) Connect(_ context.Context, s domain.Session, role string) (map[string]any, error) {
 	return map[string]any{"participant_identity": role + "_" + s.ID}, nil
 }
 func (f *fakeMedia) Delete(_ context.Context, room string) error {
@@ -30,20 +34,22 @@ func (f *fakeMedia) Delete(_ context.Context, room string) error {
 }
 
 type client struct {
-	t *testing.T
-	s *Service
+	t     *testing.T
+	s     *application.Service
+	now   *time.Time
+	media *fakeMedia
 }
 
 func (c client) call(method, path, token string, body any, want int) map[string]any {
 	c.t.Helper()
 	raw, _ := json.Marshal(body)
-	r := httptest.NewRequest(method, "/api/v1/"+path, bytes.NewReader(raw))
+	r := httptest.NewRequest(method, Prefix+path, bytes.NewReader(raw))
 	r.RemoteAddr = "127.0.0.1:12345"
 	if token != "" {
 		r.Header.Set("Authorization", "Bearer "+token)
 	}
 	w := httptest.NewRecorder()
-	c.s.Handler().ServeHTTP(w, r)
+	New(c.s).ServeHTTP(w, r)
 	if w.Code != want {
 		c.t.Fatalf("%s %s: status %d want %d: %s", method, path, w.Code, want, w.Body.String())
 	}
@@ -53,18 +59,20 @@ func (c client) call(method, path, token string, body any, want int) map[string]
 	}
 	return v
 }
-func setup(t *testing.T) (client, *SQLite) {
+func setup(t *testing.T) (client, *infra.SQLite) {
 	t.Helper()
-	store, err := OpenSQLite(filepath.Join(t.TempDir(), "test.sqlite"))
+	store, err := infra.OpenSQLite(filepath.Join(t.TempDir(), "test.sqlite"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { store.Close() })
-	s, err := New(context.Background(), store, &fakeMedia{})
+	now := time.Now()
+	fake := &fakeMedia{}
+	s, err := application.New(context.Background(), store, fake, func() time.Time { return now })
 	if err != nil {
 		t.Fatal(err)
 	}
-	return client{t, s}, store
+	return client{t: t, s: s, now: &now, media: fake}, store
 }
 func pair(c client) (map[string]any, map[string]any) {
 	h := c.call("POST", "pairings", "", nil, 201)
@@ -97,14 +105,14 @@ func TestAuthorizationAndLifecycle(t *testing.T) {
 	c.call("POST", route+"/renew", host, nil, 409)
 	c.call("POST", route+"/connect", host, nil, 409)
 	c.s.Sweep(context.Background())
-	if len(c.s.media.(*fakeMedia).deleted) != 1 {
+	if len(c.media.deleted) != 1 {
 		t.Fatal("cleanup missing")
 	}
 }
 func TestExpiryRestartAndIsolation(t *testing.T) {
 	c, store := setup(t)
 	now := time.Now()
-	c.s.now = func() time.Time { return now }
+	*c.now = now
 	h, v := pair(c)
 	route := "control-grants/" + h["id"].(string)
 	host := h["credential"].(string)
@@ -112,12 +120,13 @@ func TestExpiryRestartAndIsolation(t *testing.T) {
 	c.call("GET", route, other["credential"].(string), nil, 403)
 	c.call("POST", route+"/approve", host, nil, 200)
 	now = now.Add(11 * time.Second)
+	*c.now = now
 	c.call("POST", route+"/renew", host, nil, 409)
 	state := c.call("GET", route, v["credential"].(string), nil, 200)
 	if state["state"] != "expired" {
 		t.Fatal(state)
 	}
-	restarted, err := New(context.Background(), store, &fakeMedia{})
+	restarted, err := application.New(context.Background(), store, &fakeMedia{}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,18 +139,24 @@ func TestExpiryRestartAndIsolation(t *testing.T) {
 func TestPairingExpiryRateLimitAndSecrets(t *testing.T) {
 	c, store := setup(t)
 	now := time.Now()
-	c.s.now = func() time.Time { return now }
+	*c.now = now
 	h := c.call("POST", "pairings", "", nil, 201)
 	now = now.Add(6 * time.Minute)
+	*c.now = now
 	c.call("POST", "pairings/redeem", "", map[string]string{"code": h["pairing_code"].(string)}, 404)
 	for i := 0; i < 9; i++ {
 		c.call("POST", "pairings/redeem", "", map[string]string{"code": "0000000000"}, 404)
 	}
 	c.call("POST", "pairings/redeem", "", map[string]string{"code": "0000000000"}, 429)
-	var raw string
-	if err := store.db.QueryRow(`SELECT payload FROM control_sessions LIMIT 1`).Scan(&raw); err != nil {
+	items, err := store.Load(context.Background())
+	if err != nil {
 		t.Fatal(err)
 	}
+	data, err := json.Marshal(items)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw := string(data)
 	if bytes.Contains([]byte(raw), []byte(h["credential"].(string))) || bytes.Contains([]byte(raw), []byte(h["pairing_code"].(string))) {
 		t.Fatal("plaintext secret persisted")
 	}
@@ -156,9 +171,9 @@ func TestConcurrentRedeem(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			raw, _ := json.Marshal(map[string]string{"code": h["pairing_code"].(string)})
-			req := httptest.NewRequest("POST", "/api/v1/pairings/redeem", bytes.NewReader(raw))
+			req := httptest.NewRequest("POST", Prefix+"pairings/redeem", bytes.NewReader(raw))
 			rec := httptest.NewRecorder()
-			c.s.Handler().ServeHTTP(rec, req)
+			New(c.s).ServeHTTP(rec, req)
 			statuses <- rec.Code
 		}()
 	}
@@ -187,8 +202,8 @@ func TestMediaTokenAndManagement(t *testing.T) {
 		w.Write([]byte(`{}`))
 	}))
 	defer server.Close()
-	m := &LiveKit{URL: server.URL, PublicURL: "ws://test", Key: "key", Secret: "secret", Client: server.Client()}
-	v, err := m.Connect(context.Background(), Session{ID: "test"}, "controller")
+	m := &infra.Media{Client: &media.LiveKit{URL: server.URL, PublicURL: "ws://test", Key: "key", Secret: "secret", Client: server.Client()}}
+	v, err := m.Connect(context.Background(), domain.Session{ID: "test"}, "controller")
 	if err != nil {
 		t.Fatal(err)
 	}

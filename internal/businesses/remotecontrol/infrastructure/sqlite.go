@@ -1,51 +1,37 @@
-package remote
+package infrastructure
 
 import (
+	"av-platform/business/internal/businesses/remotecontrol/domain"
+	"av-platform/business/internal/infrastructure/database"
+	"av-platform/business/migrations"
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
-
-	_ "modernc.org/sqlite"
 )
-
-// Store isolates persistence and SQL dialect from the authorization state machine.
-// A deployment runs one API process per SQLite database.
-type Store interface {
-	Load(context.Context) ([]Session, error)
-	Save(context.Context, Session, string) error
-	Close() error
-}
 
 type SQLite struct{ db *sql.DB }
 
 func OpenSQLite(path string) (*SQLite, error) {
-	db, err := sql.Open("sqlite", path)
+	db, err := database.OpenSQLite(path)
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(1)
-	_, err = db.Exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=3000;
-CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY);
-CREATE TABLE IF NOT EXISTS control_sessions(id TEXT PRIMARY KEY, payload TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS audit_events(id INTEGER PRIMARY KEY, session_id TEXT NOT NULL, action TEXT NOT NULL, occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-INSERT OR IGNORE INTO schema_migrations(version) VALUES(1);`)
-	if err != nil {
+	if _, err = db.Exec(migrations.RemoteControl); err != nil {
 		db.Close()
 		return nil, err
 	}
 	return &SQLite{db}, nil
 }
-func (s *SQLite) Load(ctx context.Context) ([]Session, error) {
+func (s *SQLite) Load(ctx context.Context) ([]domain.Session, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT payload FROM control_sessions`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var result []Session
+	var result []domain.Session
 	for rows.Next() {
 		var raw string
-		var item Session
+		var item domain.Session
 		if err = rows.Scan(&raw); err != nil {
 			return nil, err
 		}
@@ -56,7 +42,7 @@ func (s *SQLite) Load(ctx context.Context) ([]Session, error) {
 	}
 	return result, rows.Err()
 }
-func (s *SQLite) Save(ctx context.Context, item Session, action string) error {
+func (s *SQLite) Save(ctx context.Context, item domain.Session, action string) error {
 	raw, err := json.Marshal(item)
 	if err != nil {
 		return err
@@ -78,5 +64,3 @@ func (s *SQLite) Save(ctx context.Context, item Session, action string) error {
 	return tx.Commit()
 }
 func (s *SQLite) Close() error { return s.db.Close() }
-
-var ErrConflict = errors.New("state conflict")

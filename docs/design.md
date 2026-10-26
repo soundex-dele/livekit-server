@@ -1,10 +1,10 @@
 # livekit-server 业务服务设计
 
-实现补充：首版远控业务服务采用 Go + SQLite，后续通过仓储接口迁移 PostgreSQL；使用临时配对，不包含账号体系。已实现部分及验证边界见 [远控运行文档](../../docs/remote-control/README.md)，下文保留完整平台的目标设计。
+实现补充：首版远控业务服务采用 Go + SQLite，后续通过仓储接口迁移 PostgreSQL；使用临时配对，不包含账号体系。已实现部分及验证边界见 [远控运行文档](../../docs/integration/remote-control/README.md)，下文保留完整平台的目标设计。
 
-版本：v0.1；日期：2026-10-26；状态：目标设计，仓库当前仅有初始化文件。
+版本：v0.1；日期：2026-10-26；状态：远控业务已实现，其他业务按需扩展。
 
-本仓库提供 AV Platform 业务控制面。媒体服务在 `livekit-cpp`，其当前二进制也叫 `livekit-server`；本仓库未来进程/镜像建议命名 `livekit-business-api`，避免部署歧义。跨仓库契约以 [总体设计](../../docs/platform-design.md)为准。
+本仓库提供 AV Platform 业务控制面。媒体服务在 `livekit-cpp`，其当前二进制也叫 `livekit-server`；本仓库未来进程/镜像建议命名 `livekit-business-api`，避免部署歧义。跨仓库契约以 [总体设计](../../docs/architecture/platform-design.md)为准。
 
 ## 1. 目标与职责
 
@@ -14,28 +14,19 @@
 
 首期只实现账号接入、项目成员、会议、入会 Token 与审计最小闭环。任务、资产、计费和多节点调度是后续目标。
 
-## 2. 推荐技术与模块
+## 2. 多业务模块与目录
 
-建议 Go + PostgreSQL，采用模块化单体，按领域拆包、统一事务，不首期拆成微服务。Go 仅为设计建议，确认前不生成框架代码。对接媒体侧可使用固定版本官方 Server SDK，但必须通过当前 C++ 服务支持的 RoomService 子集测试；有客户端方法并不意味着目标媒体服务支持。
+采用 Go + SQLite 模块化单体。`cmd/business-api` 解析参数，`internal/bootstrap` 装配业务、数据库、公共媒体客户端和 HTTP 路由。
 
-```text
-cmd/business-api/       进程入口和依赖装配
-internal/identity/     登录认证、会话与成员
-internal/projects/     项目、角色、配额
-internal/devices/      设备登记、归属和在线租约
-internal/meetings/     会议生命周期、入会策略
-internal/grants/       远控申请、同意、撤销和租约
-internal/media/        媒体管理适配、Token、能力与实例选择
-internal/jobs/         持久化任务、尝试、租约与状态转换
-internal/assets/       资产元数据、可用性与下载授权
-internal/audit/        审计与脱敏
-internal/outbox/       事务事件投递和重试
-api/                   OpenAPI 与版本化契约
-migrations/            数据库迁移
-tests/                 契约、数据库、集成与故障测试
-```
+`internal/businesses/remotecontrol` 按 domain、application、transport/http、infrastructure 分层。用例执行授权和状态规则，HTTP 层解析请求并映射错误，SQLite 仓储提交会话和审计事务；远控媒体适配器将角色权限转成公共媒体请求。
 
-请求层完成解析和认证，领域服务执行授权/状态规则，仓储处理数据库，media 适配器封装外部副作用。领域事务不持有数据库锁等待长时间网络请求。
+后续传屏位于 `businesses/screencast`，拥有自己的配对、接收端和会话策略。公共身份、项目、设备能力按需放入 `platform`；当前已抽出的 `platform/media` 不依赖任何业务 Session。
+
+数据库连接与公共 HTTP 响应位于 `internal/infrastructure`。业务表归具体业务仓储管理；迁移位于 `migrations/<业务>` 并嵌入二进制。未来更换数据库需要独立验证事务与并发语义。
+
+远控 API 使用 `/api/v1/remote-control/`；Web 产品挂载到 `/apps/remote-control/`，路径参数为 `-remote-control-web`。`api/remote-control/openapi.json` 是当前契约。旧路由与旧入口已移除。
+
+完整目录规则见 [仓库结构](../../docs/architecture/repository-layout.md)。下文身份、会议、任务等内容是未来业务规划，非当前已实现能力。
 
 ## 3. 数据模型（拟定）
 

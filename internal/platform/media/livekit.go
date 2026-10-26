@@ -1,4 +1,4 @@
-package remote
+package media
 
 import (
 	"bytes"
@@ -28,8 +28,8 @@ func (m *LiveKit) token(identity string, grant map[string]any) string {
 	h.Write([]byte(text))
 	return text + "." + enc(h.Sum(nil))
 }
-func (m *LiveKit) call(ctx context.Context, method, room string) error {
-	body, _ := json.Marshal(map[string]any{"name": room, "emptyTimeout": 30, "maxParticipants": 2})
+func (m *LiveKit) call(ctx context.Context, method, room string, maxParticipants int) error {
+	body, _ := json.Marshal(map[string]any{"name": room, "emptyTimeout": 30, "maxParticipants": maxParticipants})
 	if method == "DeleteRoom" {
 		body, _ = json.Marshal(map[string]string{"room": room})
 	}
@@ -53,14 +53,23 @@ func (m *LiveKit) call(ctx context.Context, method, room string) error {
 	}
 	return nil
 }
-func (m *LiveKit) Connect(ctx context.Context, s Session, role string) (map[string]any, error) {
-	room := "rc_" + s.ID
-	if err := m.call(ctx, "CreateRoom", room); err != nil {
+
+// JoinRequest contains policy already granted by a business use case.
+type JoinRequest struct {
+	Room, Identity                           string
+	MaxParticipants                          int
+	CanPublish, CanSubscribe, CanPublishData bool
+}
+
+func (m *LiveKit) Connect(ctx context.Context, req JoinRequest) (map[string]any, error) {
+	if err := m.call(ctx, "CreateRoom", req.Room, req.MaxParticipants); err != nil {
 		return nil, err
 	}
-	identity := role + "_" + s.ID
-	return map[string]any{"media_url": m.PublicURL, "media_token": m.token(identity, map[string]any{"roomJoin": true, "room": room, "canPublish": role == "host", "canSubscribe": true, "canPublishData": true, "canUpdateOwnMetadata": false}), "participant_identity": identity, "expires_at": time.Now().Add(time.Minute).UTC().Format(time.RFC3339)}, nil
+	return map[string]any{"media_url": m.PublicURL, "media_token": m.token(req.Identity, map[string]any{
+		"roomJoin": true, "room": req.Room, "canPublish": req.CanPublish, "canSubscribe": req.CanSubscribe,
+		"canPublishData": req.CanPublishData, "canUpdateOwnMetadata": false}),
+		"participant_identity": req.Identity, "expires_at": time.Now().Add(time.Minute).UTC().Format(time.RFC3339)}, nil
 }
 func (m *LiveKit) Delete(ctx context.Context, room string) error {
-	return m.call(ctx, "DeleteRoom", room)
+	return m.call(ctx, "DeleteRoom", room, 0)
 }
