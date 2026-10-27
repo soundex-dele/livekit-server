@@ -29,3 +29,5 @@ AV Platform 的业务服务仓库。
 ## 多业务边界
 
 `internal/businesses/<业务>` 拥有领域、用例、HTTP 和存储适配；`platform` 提供共享媒体等能力；`bootstrap` 负责装配。当前远控 API 前缀为 `/api/v1/remote-control/`，网页位于 `/apps/remote-control/`。启动参数 `-remote-control-web` 指向该 APP 的 Web 构建目录。
+
+- [直播业务接口](api/live-studio/openapi.json)：自有平台直播、观看与互动；构建和运行默认关闭。

@@ -1,0 +1,1684 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AV Live Studio API",
+    "version": "0.1.0"
+  },
+  "components": {
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "av_session"
+      },
+      "desktop": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Command": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "target": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "points": {
+            "type": "integer",
+            "enum": [
+              1,
+              10,
+              50
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "connected": {
+            "type": "boolean"
+          },
+          "stage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "Event": {
+        "type": "object",
+        "required": [
+          "seq",
+          "kind",
+          "payload",
+          "created"
+        ],
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "broadcast",
+              "chat",
+              "gift",
+              "guest",
+              "mute",
+              "kick",
+              "pk"
+            ]
+          },
+          "payload": {
+            "type": "object"
+          },
+          "created": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "summary": "register",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9_]{3,32}$"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 128
+                  },
+                  "old_password": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "login",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9_]{3,32}$"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 128
+                  },
+                  "old_password": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "summary": "logout",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9_]{3,32}$"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 128
+                  },
+                  "old_password": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "summary": "refresh",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9_]{3,32}$"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 128
+                  },
+                  "old_password": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password": {
+      "post": {
+        "summary": "password",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9_]{3,32}$"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 128
+                  },
+                  "old_password": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "summary": "Current account",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ]
+      }
+    },
+    "/api/v1/live-studio/rooms": {
+      "get": {
+        "summary": "rooms",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/leaderboard": {
+      "get": {
+        "summary": "leaderboard",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/wallet": {
+      "get": {
+        "summary": "wallet",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ]
+      }
+    },
+    "/api/v1/live-studio/start": {
+      "post": {
+        "summary": "Create or return the authenticated owner active broadcast",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/connect": {
+      "post": {
+        "summary": "connect",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/heartbeat": {
+      "post": {
+        "summary": "heartbeat",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/presence": {
+      "post": {
+        "summary": "presence",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/stop": {
+      "post": {
+        "summary": "stop",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/chat": {
+      "post": {
+        "summary": "chat",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/mute": {
+      "post": {
+        "summary": "mute",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/kick": {
+      "post": {
+        "summary": "kick",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/guest/request": {
+      "post": {
+        "summary": "guest/request",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/guest/approve": {
+      "post": {
+        "summary": "guest/approve",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/guest/reject": {
+      "post": {
+        "summary": "guest/reject",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/guest/end": {
+      "post": {
+        "summary": "guest/end",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/gift": {
+      "post": {
+        "summary": "gift",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/pk/invite": {
+      "post": {
+        "summary": "pk/invite",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/pk/accept": {
+      "post": {
+        "summary": "pk/accept",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/pk/reject": {
+      "post": {
+        "summary": "pk/reject",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/pk/leave": {
+      "post": {
+        "summary": "pk/leave",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/snapshot": {
+      "get": {
+        "summary": "Current state including online users, guests, PK and contribution ranking",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/live-studio/broadcasts/{id}/events": {
+      "get": {
+        "summary": "Ordered events after cursor; supports WebSocket upgrade",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/live-studio/admin/users": {
+      "get": {
+        "summary": "Administrator: list accounts",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ]
+      }
+    },
+    "/api/v1/live-studio/admin/disable": {
+      "post": {
+        "summary": "Administrator: disable",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user": {
+                    "type": "string"
+                  },
+                  "disabled": {
+                    "type": "boolean"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 10
+                  }
+                },
+                "required": [
+                  "user"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live-studio/admin/reset-password": {
+      "post": {
+        "summary": "Administrator: reset-password",
+        "responses": {
+          "200": {
+            "description": "Success; application JSON snapshot or command result"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Missing/expired session"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "State conflict, quota or capacity"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "502": {
+            "description": "Media unavailable"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "desktop": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user": {
+                    "type": "string"
+                  },
+                  "disabled": {
+                    "type": "boolean"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 10
+                  }
+                },
+                "required": [
+                  "user"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

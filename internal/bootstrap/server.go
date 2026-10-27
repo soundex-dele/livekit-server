@@ -2,13 +2,16 @@
 package bootstrap
 
 import (
+	"av-platform/business/internal/businesses/livestudio"
 	"av-platform/business/internal/businesses/remotecontrol/application"
 	remoteinfra "av-platform/business/internal/businesses/remotecontrol/infrastructure"
 	remotehttp "av-platform/business/internal/businesses/remotecontrol/transport/http"
 	castapp "av-platform/business/internal/businesses/screencast/application"
 	castinfra "av-platform/business/internal/businesses/screencast/infrastructure"
 	casthttp "av-platform/business/internal/businesses/screencast/transport/http"
+	"av-platform/business/internal/infrastructure/database"
 	httpx "av-platform/business/internal/infrastructure/http"
+	"av-platform/business/internal/platform/identity"
 	"av-platform/business/internal/platform/media"
 	"context"
 	"fmt"
@@ -20,6 +23,8 @@ import (
 type Config struct {
 	Listen, Database, RemoteControlWeb, ScreenCastWeb, MediaAPI, MediaURL string
 	APIKey, APISecret, TLSCert, TLSKey                                    string
+	LiveStudioWeb, StudioAdmissionSecret                                  string
+	EnableLiveStudio                                                      bool
 }
 
 // Handler registers each business explicitly. Unknown APIs never fall through to static files.
@@ -35,6 +40,13 @@ func Handler(remote http.Handler, web string, cast ...Product) http.Handler {
 		mux.Handle(casthttp.Prefix, cast[0].Handler)
 		if cast[0].Web != "" {
 			mux.Handle("/apps/screen-cast/", http.StripPrefix("/apps/screen-cast/", http.FileServer(http.Dir(cast[0].Web))))
+		}
+	}
+	if len(cast) > 1 && cast[1].Handler != nil {
+		mux.Handle(livestudio.Prefix, cast[1].Handler)
+		mux.Handle("/api/v1/auth/", cast[1].Handler)
+		if cast[1].Web != "" {
+			mux.Handle("/apps/live-studio/", http.StripPrefix("/apps/live-studio/", http.FileServer(http.Dir(cast[1].Web))))
 		}
 	}
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) { httpx.Fail(w, 404, "not_found") })
@@ -70,7 +82,31 @@ func Run(ctx context.Context, cfg Config) error {
 	if err != nil {
 		return err
 	}
-	server := &http.Server{Addr: cfg.Listen, Handler: Handler(remotehttp.New(svc), cfg.RemoteControlWeb, Product{casthttp.New(castSvc), cfg.ScreenCastWeb}),
+	var studio *livestudio.Service
+	var studioProduct Product
+	if cfg.EnableLiveStudio {
+		if len(cfg.StudioAdmissionSecret) < 24 {
+			return fmt.Errorf("LIVE_STUDIO_ADMISSION_SECRET must contain at least 24 characters")
+		}
+		db, e := database.OpenSQLite(cfg.Database)
+		if e != nil {
+			return e
+		}
+		defer db.Close()
+		auth, e := identity.New(db)
+		if e != nil {
+			return e
+		}
+		studio, e = livestudio.New(db, &media.LiveKit{URL: cfg.MediaAPI, PublicURL: cfg.MediaURL, Key: cfg.APIKey, Secret: cfg.APISecret, Client: &http.Client{Timeout: 2 * time.Second}})
+		if e != nil {
+			return e
+		}
+		if e = studio.Sweep(ctx); e != nil {
+			return e
+		}
+		studioProduct = Product{livestudio.NewHandler(studio, auth, cfg.StudioAdmissionSecret), cfg.LiveStudioWeb}
+	}
+	server := &http.Server{Addr: cfg.Listen, Handler: Handler(remotehttp.New(svc), cfg.RemoteControlWeb, Product{casthttp.New(castSvc), cfg.ScreenCastWeb}, studioProduct),
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second,
 		IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16384}
 	runCtx, cancel := context.WithCancel(ctx)
@@ -87,6 +123,11 @@ func Run(ctx context.Context, cfg Config) error {
 			case <-ticker.C:
 				svc.Sweep(runCtx)
 				castSvc.Sweep(runCtx)
+				if studio != nil {
+					if e := studio.Sweep(runCtx); e != nil {
+						log.Printf("live-studio sweep: %v", e)
+					}
+				}
 			}
 		}
 	}()
