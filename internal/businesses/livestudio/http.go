@@ -25,6 +25,7 @@ type bucket struct {
 type Handler struct {
 	Service         *Service
 	Auth            *identity.Service
+	authHandler     *identity.Handler
 	AdmissionSecret string
 	mu              sync.Mutex
 	limits          map[string]bucket
@@ -32,7 +33,7 @@ type Handler struct {
 }
 
 func NewHandler(s *Service, a *identity.Service, secret string) *Handler {
-	return &Handler{Service: s, Auth: a, AdmissionSecret: secret, limits: make(map[string]bucket), authSlots: make(chan struct{}, 2)}
+	return &Handler{Service: s, Auth: a, authHandler: identity.NewHandler(a), AdmissionSecret: secret, limits: make(map[string]bucket), authSlots: make(chan struct{}, 2)}
 }
 func reply(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -121,7 +122,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasPrefix(r.URL.Path, "/api/v1/auth/") {
-		h.auth(w, r, ip)
+		h.authHandler.ServeHTTP(w, r)
 		return
 	}
 	token := bearer(r)
@@ -179,83 +180,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if e != nil {
 		httpError(w, e)
 		return
-	}
-	reply(w, 200, out)
-}
-func (h *Handler) auth(w http.ResponseWriter, r *http.Request, ip string) {
-	action := strings.TrimPrefix(r.URL.Path, "/api/v1/auth/")
-	token := bearer(r)
-	u, _ := h.Auth.Authenticate(r.Context(), token)
-	if action == "me" && r.Method == "GET" {
-		if u.ID == "" {
-			httpError(w, identity.ErrUnauthorized)
-		} else {
-			reply(w, 200, u)
-		}
-		return
-	}
-	if r.Method != "POST" {
-		httpError(w, fail("method_not_allowed", 405))
-		return
-	}
-	var c struct {
-		Name        string `json:"name"`
-		Password    string `json:"password"`
-		OldPassword string `json:"old_password"`
-	}
-	if e := body(w, r, &c); e != nil {
-		httpError(w, e)
-		return
-	}
-	if !h.allow("auth:"+ip, 20, time.Minute) {
-		httpError(w, fail("rate_limited", 429))
-		return
-	}
-	select {
-	case h.authSlots <- struct{}{}:
-		defer func() { <-h.authSlots }()
-	default:
-		httpError(w, fail("busy", 429))
-		return
-	}
-	var e error
-	var next string
-	switch action {
-	case "register":
-		u, e = h.Auth.Register(r.Context(), c.Name, c.Password, false)
-		if e == nil {
-			next, e = h.Auth.Session(r.Context(), u.ID)
-		}
-	case "login":
-		u, next, e = h.Auth.Login(r.Context(), c.Name, c.Password)
-	case "logout":
-		e = h.Auth.Logout(r.Context(), token)
-	case "refresh":
-		if u.ID == "" {
-			e = identity.ErrUnauthorized
-		} else {
-			next, e = h.Auth.Session(r.Context(), u.ID)
-			if e == nil {
-				e = h.Auth.Logout(r.Context(), token)
-			}
-		}
-	case "password":
-		if u.ID == "" {
-			e = identity.ErrUnauthorized
-		} else {
-			e = h.Auth.ChangePassword(r.Context(), u, c.OldPassword, c.Password)
-		}
-	default:
-		e = fail("not_found", 404)
-	}
-	if e != nil {
-		httpError(w, e)
-		return
-	}
-	setSession(w, r, next)
-	out := map[string]any{"user": u}
-	if r.Header.Get("X-AV-Client") == "desktop" {
-		out["session_token"] = next
 	}
 	reply(w, 200, out)
 }

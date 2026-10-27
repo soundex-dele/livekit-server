@@ -1,0 +1,1525 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AV Meeting API",
+    "version": "1.0.0",
+    "description": "Single-instance 25-person meetings. Account API /api/v1/auth/ preserves existing register/login/logout/refresh/password/me contracts. Desktop sends X-AV-Client: desktop and receives session_token. Commands return accepted plus durable operations (pending/retrying/done); accepted is not confirmation of media effects."
+  },
+  "paths": {
+    "/api/v1/conference/guest": {
+      "post": {
+        "summary": "Create an unguessable guest credential (guest_token)",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings": {
+      "get": {
+        "summary": "List meetings created or attended by the current account",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a quick or scheduled meeting; returns id and number",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/join": {
+      "post": {
+        "summary": "Join by number, name and optional password; returns id and member_id",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Meeting snapshot scoped to caller; no credentials or password hashes",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/presence": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Refresh waiting presence and return meeting snapshot",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/credentials": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Return media_url, media_token, room, participant_identity and expires_at after admission",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/start": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Creator starts scheduled meeting",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/edit": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Creator edits scheduled meeting; blank password preserves existing password",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/cancel": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Creator cancels scheduled meeting",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/approve": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Host admits waiting target",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/reject": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Host rejects waiting target",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/remove": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Host revokes target and durably schedules media removal",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/mute": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Host mutes target microphone tracks",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/mute-all": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Host mutes all other participants",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/request-unmute": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Host requests target microphone consent",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/transfer": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Transfer host to an online registered target",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/lock": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Host changes locked state using enabled",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/share": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Acquire or release single screen-share slot using enabled",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/leave": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Leave; active host must first transfer or end",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/meetings/{id}/end": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "Host stops admission and durably deletes media room",
+        "security": [
+          {
+            "Account": []
+          },
+          {
+            "Guest": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authentication required or expired"
+          },
+          "403": {
+            "description": "Policy or role denied"
+          },
+          "404": {
+            "description": "Meeting not found"
+          },
+          "409": {
+            "description": "State, capacity or idempotency conflict"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Service unavailable; operation may need retry"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Required for creation and management commands; reuse on uncertain retries."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conference/admission": {
+      "post": {
+        "summary": "Internal loopback media admission: verify room, identity and grant against current policy",
+        "security": [
+          {
+            "AdmissionSecret": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "room",
+                  "identity",
+                  "grant"
+                ],
+                "properties": {
+                  "room": {
+                    "type": "string"
+                  },
+                  "identity": {
+                    "type": "string"
+                  },
+                  "grant": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Allowed"
+          },
+          "403": {
+            "description": "Revoked, wrong scope or ended"
+          },
+          "401": {
+            "description": "Missing admission secret"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "Account": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "Guest": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-AV-Guest"
+      },
+      "AdmissionSecret": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Command": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "duration_minutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1440,
+            "default": 60
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "waiting_room": {
+            "type": "boolean",
+            "default": true
+          },
+          "scheduled": {
+            "type": "boolean"
+          },
+          "number": {
+            "type": "string",
+            "pattern": "^[0-9]{9}$"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "target": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "member_id": {
+            "type": "string"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "request_id": {
+            "type": "string"
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

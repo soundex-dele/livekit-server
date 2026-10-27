@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -34,7 +33,7 @@ func (m *LiveKit) rpc(ctx context.Context, method, room string, body any) (map[s
 		return map[string]any{}, nil
 	}
 	if response.StatusCode != 200 {
-		return nil, fmt.Errorf("media API status %d", response.StatusCode)
+		return nil, &RPCError{Status: response.StatusCode}
 	}
 	var out map[string]any
 	e = json.NewDecoder(io.LimitReader(response.Body, 1024*1024)).Decode(&out)

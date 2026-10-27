@@ -10,3 +10,6 @@ var ScreenCast string
 
 //go:embed live-studio/001_studio.sql
 var LiveStudio string
+
+//go:embed conference/001_meetings.sql
+var Conference string

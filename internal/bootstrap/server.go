@@ -2,6 +2,7 @@
 package bootstrap
 
 import (
+	"av-platform/business/internal/businesses/conference"
 	"av-platform/business/internal/businesses/livestudio"
 	"av-platform/business/internal/businesses/remotecontrol/application"
 	remoteinfra "av-platform/business/internal/businesses/remotecontrol/infrastructure"
@@ -25,6 +26,8 @@ type Config struct {
 	APIKey, APISecret, TLSCert, TLSKey                                    string
 	LiveStudioWeb, StudioAdmissionSecret                                  string
 	EnableLiveStudio                                                      bool
+	EnableConference                                                      bool
+	ConferenceAdmissionSecret                                             string
 }
 
 // Handler registers each business explicitly. Unknown APIs never fall through to static files.
@@ -44,10 +47,18 @@ func Handler(remote http.Handler, web string, cast ...Product) http.Handler {
 	}
 	if len(cast) > 1 && cast[1].Handler != nil {
 		mux.Handle(livestudio.Prefix, cast[1].Handler)
-		mux.Handle("/api/v1/auth/", cast[1].Handler)
+		if len(cast) < 3 || cast[2].Handler == nil {
+			mux.Handle("/api/v1/auth/", cast[1].Handler)
+		}
 		if cast[1].Web != "" {
 			mux.Handle("/apps/live-studio/", http.StripPrefix("/apps/live-studio/", http.FileServer(http.Dir(cast[1].Web))))
 		}
+	}
+	if len(cast) > 2 && cast[2].Handler != nil {
+		mux.Handle(conference.Prefix, cast[2].Handler)
+	}
+	if len(cast) > 3 && cast[3].Handler != nil {
+		mux.Handle("/api/v1/auth/", cast[3].Handler)
 	}
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) { httpx.Fail(w, 404, "not_found") })
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { httpx.Reply(w, 200, map[string]bool{"ok": true}) })
@@ -82,6 +93,28 @@ func Run(ctx context.Context, cfg Config) error {
 	if err != nil {
 		return err
 	}
+	var conferenceService *conference.Service
+	var conferenceProduct, authProduct Product
+	if cfg.EnableConference {
+		if len(cfg.ConferenceAdmissionSecret) < 24 {
+			return fmt.Errorf("CONFERENCE_ADMISSION_SECRET must contain at least 24 characters")
+		}
+		db, e := database.OpenSQLite(cfg.Database)
+		if e != nil {
+			return e
+		}
+		defer db.Close()
+		auth, e := identity.New(db)
+		if e != nil {
+			return e
+		}
+		conferenceService, e = conference.New(db, &conference.LiveMedia{Client: &media.LiveKit{URL: cfg.MediaAPI, PublicURL: cfg.MediaURL, Key: cfg.APIKey, Secret: cfg.APISecret, Client: &http.Client{Timeout: 2 * time.Second}}})
+		if e != nil {
+			return e
+		}
+		conferenceProduct = Product{Handler: conference.NewHandler(conferenceService, auth, cfg.ConferenceAdmissionSecret)}
+		authProduct = Product{Handler: identity.NewHandler(auth)}
+	}
 	var studio *livestudio.Service
 	var studioProduct Product
 	if cfg.EnableLiveStudio {
@@ -106,7 +139,7 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 		studioProduct = Product{livestudio.NewHandler(studio, auth, cfg.StudioAdmissionSecret), cfg.LiveStudioWeb}
 	}
-	server := &http.Server{Addr: cfg.Listen, Handler: Handler(remotehttp.New(svc), cfg.RemoteControlWeb, Product{casthttp.New(castSvc), cfg.ScreenCastWeb}, studioProduct),
+	server := &http.Server{Addr: cfg.Listen, Handler: Handler(remotehttp.New(svc), cfg.RemoteControlWeb, Product{casthttp.New(castSvc), cfg.ScreenCastWeb}, studioProduct, conferenceProduct, authProduct),
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second,
 		IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16384}
 	runCtx, cancel := context.WithCancel(ctx)
@@ -121,6 +154,11 @@ func Run(ctx context.Context, cfg Config) error {
 			case <-runCtx.Done():
 				return
 			case <-ticker.C:
+				if conferenceService != nil {
+					if e := conferenceService.Sweep(runCtx); e != nil {
+						log.Printf("conference sweep: %v", e)
+					}
+				}
 				svc.Sweep(runCtx)
 				castSvc.Sweep(runCtx)
 				if studio != nil {
