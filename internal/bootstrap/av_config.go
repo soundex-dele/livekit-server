@@ -18,6 +18,7 @@ type AVConfig struct {
 	Nodes           []control.Node
 	Businesses      []string
 	Web             map[string]string
+	AdminWeb        string
 	TLSCert, TLSKey string
 }
 
@@ -53,6 +54,7 @@ func LoadAVConfig() (AVConfig, error) {
 	for _, m := range []string{"screen-cast", "conference", "remote-control", "live-studio"} {
 		c.Web[m] = os.Getenv("AV_" + strings.ToUpper(strings.ReplaceAll(m, "-", "_")) + "_WEB")
 	}
+	c.AdminWeb = os.Getenv("AV_ADMIN_WEB")
 	raw := []byte(os.Getenv("AV_MEDIA_NODES"))
 	if name := os.Getenv("AV_MEDIA_NODES_FILE"); name != "" {
 		var e error

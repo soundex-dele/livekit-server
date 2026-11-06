@@ -1,6 +1,651 @@
 {
   "components": {
     "schemas": {
+      "AVAdminAction": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "end",
+              "cancel",
+              "revoke-control",
+              "kick",
+              "mute",
+              "request-unmute",
+              "chat-mute",
+              "chat-unmute",
+              "stage-remove"
+            ],
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "version": {
+            "description": "Optional expected resource version; stale writes return 409",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "action",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "AVAdminActionResult": {
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "action_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "operation_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "state": {
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accepted",
+          "action_id",
+          "id",
+          "state",
+          "version",
+          "operation_ids"
+        ],
+        "type": "object"
+      },
+      "AVAdminDetail": {
+        "properties": {
+          "actions": {
+            "items": {
+              "properties": {
+                "action": {
+                  "type": "string"
+                },
+                "actor": {
+                  "type": "string"
+                },
+                "created": {
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "operation_ids": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "actor",
+                "action",
+                "target",
+                "reason",
+                "created",
+                "operation_ids"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "bindings": {
+            "items": {
+              "properties": {
+                "created": {
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "generation": {
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "node_id": {
+                  "type": "string"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "node_id",
+                "purpose",
+                "state",
+                "generation",
+                "created"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "members": {
+            "items": {
+              "properties": {
+                "banned": {
+                  "type": "boolean"
+                },
+                "muted": {
+                  "type": "boolean"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "policy_version": {
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "role": {
+                  "type": "string"
+                },
+                "stage": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "subject_id": {
+                  "type": "string"
+                },
+                "unmute_request": {
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "updated": {
+                  "format": "int64",
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "subject_id",
+                "name",
+                "role",
+                "state",
+                "policy_version",
+                "updated",
+                "muted",
+                "unmute_request",
+                "stage",
+                "banned"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "members_truncated": {
+            "type": "boolean"
+          },
+          "resource": {
+            "properties": {
+              "business": {
+                "type": "string"
+              },
+              "created": {
+                "format": "int64",
+                "type": "integer"
+              },
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "module_enabled": {
+                "type": "boolean"
+              },
+              "organization_id": {
+                "type": "string"
+              },
+              "owner": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "updated": {
+                "format": "int64",
+                "type": "integer"
+              },
+              "version": {
+                "format": "int64",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "organization_id",
+              "business",
+              "kind",
+              "title",
+              "state",
+              "owner",
+              "version",
+              "created",
+              "updated",
+              "module_enabled"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "resource",
+          "members",
+          "bindings",
+          "actions",
+          "details",
+          "members_truncated"
+        ],
+        "type": "object"
+      },
+      "AVAdminNode": {
+        "properties": {
+          "bindings": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "capacity": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "configured": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "healthy": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "incarnation": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "updated": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "incarnation",
+          "enabled",
+          "healthy",
+          "status",
+          "capacity",
+          "bindings",
+          "updated",
+          "configured"
+        ],
+        "type": "object"
+      },
+      "AVAdminOperation": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "binding_id": {
+            "type": "string"
+          },
+          "created": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "job_id": {
+            "type": "string"
+          },
+          "organization_id": {
+            "type": "string"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "updated": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "resource_id",
+          "binding_id",
+          "subject_id",
+          "action",
+          "state",
+          "job_id",
+          "created",
+          "updated"
+        ],
+        "type": "object"
+      },
+      "AVAdminOperationPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "properties": {
+                "action": {
+                  "type": "string"
+                },
+                "binding_id": {
+                  "type": "string"
+                },
+                "created": {
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "job_id": {
+                  "type": "string"
+                },
+                "organization_id": {
+                  "type": "string"
+                },
+                "resource_id": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "subject_id": {
+                  "type": "string"
+                },
+                "updated": {
+                  "format": "int64",
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "organization_id",
+                "resource_id",
+                "binding_id",
+                "subject_id",
+                "action",
+                "state",
+                "job_id",
+                "created",
+                "updated"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "offset": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "type": "object"
+      },
+      "AVAdminOverview": {
+        "properties": {
+          "created_last_24h": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "generated_at": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "operations": {
+            "items": {
+              "properties": {
+                "business": {
+                  "type": "string"
+                },
+                "count": {
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "state": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "state",
+                "count"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "resources": {
+            "items": {
+              "properties": {
+                "business": {
+                  "type": "string"
+                },
+                "count": {
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "state": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "state",
+                "count"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "generated_at",
+          "resources",
+          "created_last_24h",
+          "operations"
+        ],
+        "type": "object"
+      },
+      "AVAdminResource": {
+        "properties": {
+          "business": {
+            "type": "string"
+          },
+          "created": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "module_enabled": {
+            "type": "boolean"
+          },
+          "organization_id": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updated": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "business",
+          "kind",
+          "title",
+          "state",
+          "owner",
+          "version",
+          "created",
+          "updated",
+          "module_enabled"
+        ],
+        "type": "object"
+      },
+      "AVAdminResourcePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "properties": {
+                "business": {
+                  "type": "string"
+                },
+                "created": {
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "module_enabled": {
+                  "type": "boolean"
+                },
+                "organization_id": {
+                  "type": "string"
+                },
+                "owner": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "updated": {
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "version": {
+                  "format": "int64",
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "organization_id",
+                "business",
+                "kind",
+                "title",
+                "state",
+                "owner",
+                "version",
+                "created",
+                "updated",
+                "module_enabled"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "offset": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "type": "object"
+      },
       "AVMediaOperation": {
         "properties": {
           "action": {
@@ -499,6 +1144,32 @@
         "additionalProperties": true,
         "type": "object"
       },
+      "OrganizationDirectoryPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Record"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "total"
+        ],
+        "type": "object"
+      },
       "PageJob": {
         "additionalProperties": false,
         "properties": {
@@ -925,6 +1596,1687 @@
   },
   "openapi": "3.0.3",
   "paths": {
+    "/api/v1/admin/organizations": {
+      "get": {
+        "description": "System administrator session only. Lists all organizations, without granting membership. Bearer API keys are rejected.",
+        "operationId": "adminListOrganizations",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Case-insensitive organization name or ID substring.",
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationDirectoryPage"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/audit": {
+      "get": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationListAudit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageRecord"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/audit/export": {
+      "get": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationExportAudit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Records"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/context": {
+      "get": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationGetContext",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Actor"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/events": {
+      "get": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationListEvents",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageJob"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/events/{id}/{action}": {
+      "post": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationControlEvents",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "action",
+            "required": true,
+            "schema": {
+              "enum": [
+                "retry",
+                "cancel"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Foundation-Request",
+            "required": true,
+            "schema": {
+              "enum": [
+                "1"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Empty"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OK"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/invitations": {
+      "post": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationInviteMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Foundation-Request",
+            "required": true,
+            "schema": {
+              "enum": [
+                "1"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ID"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/job-types": {
+      "get": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationListJobTypes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Strings"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/jobs": {
+      "get": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationListJobs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageJob"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      },
+      "post": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationSubmitJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Foundation-Request",
+            "required": true,
+            "schema": {
+              "enum": [
+                "1"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ID"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/jobs/{id}": {
+      "get": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationGetJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/jobs/{id}/{action}": {
+      "post": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationControlJobs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "action",
+            "required": true,
+            "schema": {
+              "enum": [
+                "retry",
+                "cancel"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Foundation-Request",
+            "required": true,
+            "schema": {
+              "enum": [
+                "1"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Empty"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OK"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/members": {
+      "get": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationListMembers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageRecord"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/members/{id}/{action}": {
+      "post": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationManageMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "action",
+            "required": true,
+            "schema": {
+              "enum": [
+                "role",
+                "remove"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Foundation-Request",
+            "required": true,
+            "schema": {
+              "enum": [
+                "1"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OK"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/permissions": {
+      "get": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationGetPermissions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Permissions"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/roles": {
+      "get": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationListRoles",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageRecord"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/organizations/{organization}/roles/{id}": {
+      "put": {
+        "description": "Explicit organization governance by a system administrator session. No membership is created. Ordinary organization access remains membership-verified. Bearer API keys are rejected.",
+        "operationId": "adminOrganizationSetRole",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Foundation-Request",
+            "required": true,
+            "schema": {
+              "enum": [
+                "1"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Role"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OK"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid input"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "administration"
+        ]
+      }
+    },
     "/api/v1/api-keys": {
       "get": {
         "operationId": "listKeys",
@@ -2059,6 +4411,824 @@
         "security": [],
         "tags": [
           "core"
+        ]
+      }
+    },
+    "/api/v1/av/admin/organizations/{orgId}/operations": {
+      "get": {
+        "description": "Platform administrator or current organization member with av.manage; does not require participation in the resource. API keys and resource credentials are rejected.",
+        "operationId": "av_admin_get_organizations_orgId_operations",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "business",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 10000000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AVAdminOperationPage"
+                }
+              }
+            },
+            "description": "Management result. Accepted media changes finish asynchronously."
+          },
+          "400": {
+            "description": "Invalid filter/action or missing idempotency key"
+          },
+          "401": {
+            "description": "Login session required"
+          },
+          "403": {
+            "description": "Management permission denied"
+          },
+          "404": {
+            "description": "Resource not found in the selected organization"
+          },
+          "409": {
+            "description": "Resource state, version or idempotency conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/av/admin/organizations/{orgId}/operations/{id}": {
+      "get": {
+        "description": "Platform administrator or current organization member with av.manage; does not require participation in the resource. API keys and resource credentials are rejected.",
+        "operationId": "av_admin_get_organizations_orgId_operations_id",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AVAdminOperation"
+                }
+              }
+            },
+            "description": "Management result. Accepted media changes finish asynchronously."
+          },
+          "400": {
+            "description": "Invalid filter/action or missing idempotency key"
+          },
+          "401": {
+            "description": "Login session required"
+          },
+          "403": {
+            "description": "Management permission denied"
+          },
+          "404": {
+            "description": "Resource not found in the selected organization"
+          },
+          "409": {
+            "description": "Resource state, version or idempotency conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/av/admin/organizations/{orgId}/overview": {
+      "get": {
+        "description": "Platform administrator or current organization member with av.manage; does not require participation in the resource. API keys and resource credentials are rejected.",
+        "operationId": "av_admin_get_organizations_orgId_overview",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AVAdminOverview"
+                }
+              }
+            },
+            "description": "Management result. Accepted media changes finish asynchronously."
+          },
+          "400": {
+            "description": "Invalid filter/action or missing idempotency key"
+          },
+          "401": {
+            "description": "Login session required"
+          },
+          "403": {
+            "description": "Management permission denied"
+          },
+          "404": {
+            "description": "Resource not found in the selected organization"
+          },
+          "409": {
+            "description": "Resource state, version or idempotency conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/av/admin/organizations/{orgId}/resources": {
+      "get": {
+        "description": "Platform administrator or current organization member with av.manage; does not require participation in the resource. API keys and resource credentials are rejected.",
+        "operationId": "av_admin_get_organizations_orgId_resources",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "business",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 10000000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AVAdminResourcePage"
+                }
+              }
+            },
+            "description": "Management result. Accepted media changes finish asynchronously."
+          },
+          "400": {
+            "description": "Invalid filter/action or missing idempotency key"
+          },
+          "401": {
+            "description": "Login session required"
+          },
+          "403": {
+            "description": "Management permission denied"
+          },
+          "404": {
+            "description": "Resource not found in the selected organization"
+          },
+          "409": {
+            "description": "Resource state, version or idempotency conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/av/admin/organizations/{orgId}/resources/{id}": {
+      "get": {
+        "description": "Platform administrator or current organization member with av.manage; does not require participation in the resource. API keys and resource credentials are rejected.",
+        "operationId": "av_admin_get_organizations_orgId_resources_id",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AVAdminDetail"
+                }
+              }
+            },
+            "description": "Management result. Accepted media changes finish asynchronously."
+          },
+          "400": {
+            "description": "Invalid filter/action or missing idempotency key"
+          },
+          "401": {
+            "description": "Login session required"
+          },
+          "403": {
+            "description": "Management permission denied"
+          },
+          "404": {
+            "description": "Resource not found in the selected organization"
+          },
+          "409": {
+            "description": "Resource state, version or idempotency conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/av/admin/organizations/{orgId}/resources/{id}/actions": {
+      "post": {
+        "description": "Platform administrator or current organization member with av.manage; does not require participation in the resource. API keys and resource credentials are rejected.",
+        "operationId": "av_admin_post_organizations_orgId_resources_id_actions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Foundation-Request",
+            "required": true,
+            "schema": {
+              "enum": [
+                "1"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AVAdminAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AVAdminActionResult"
+                }
+              }
+            },
+            "description": "Management result. Accepted media changes finish asynchronously."
+          },
+          "400": {
+            "description": "Invalid filter/action or missing idempotency key"
+          },
+          "401": {
+            "description": "Login session required"
+          },
+          "403": {
+            "description": "Management permission denied"
+          },
+          "404": {
+            "description": "Resource not found in the selected organization"
+          },
+          "409": {
+            "description": "Resource state, version or idempotency conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/av/admin/platform/media-nodes": {
+      "get": {
+        "description": "Platform administrator session required; API keys and resource credentials are rejected.",
+        "operationId": "av_admin_get_platform_media_nodes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "$ref": "#/components/schemas/AVAdminNode"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Management result. Accepted media changes finish asynchronously."
+          },
+          "400": {
+            "description": "Invalid filter/action or missing idempotency key"
+          },
+          "401": {
+            "description": "Login session required"
+          },
+          "403": {
+            "description": "Management permission denied"
+          },
+          "404": {
+            "description": "Resource not found in the selected organization"
+          },
+          "409": {
+            "description": "Resource state, version or idempotency conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/av/admin/platform/operations": {
+      "get": {
+        "description": "Platform administrator session required; API keys and resource credentials are rejected.",
+        "operationId": "av_admin_get_platform_operations",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "business",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 10000000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AVAdminOperationPage"
+                }
+              }
+            },
+            "description": "Management result. Accepted media changes finish asynchronously."
+          },
+          "400": {
+            "description": "Invalid filter/action or missing idempotency key"
+          },
+          "401": {
+            "description": "Login session required"
+          },
+          "403": {
+            "description": "Management permission denied"
+          },
+          "404": {
+            "description": "Resource not found in the selected organization"
+          },
+          "409": {
+            "description": "Resource state, version or idempotency conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/av/admin/platform/overview": {
+      "get": {
+        "description": "Platform administrator session required; API keys and resource credentials are rejected.",
+        "operationId": "av_admin_get_platform_overview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AVAdminOverview"
+                }
+              }
+            },
+            "description": "Management result. Accepted media changes finish asynchronously."
+          },
+          "400": {
+            "description": "Invalid filter/action or missing idempotency key"
+          },
+          "401": {
+            "description": "Login session required"
+          },
+          "403": {
+            "description": "Management permission denied"
+          },
+          "404": {
+            "description": "Resource not found in the selected organization"
+          },
+          "409": {
+            "description": "Resource state, version or idempotency conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/av/admin/platform/resources": {
+      "get": {
+        "description": "Platform administrator session required; API keys and resource credentials are rejected.",
+        "operationId": "av_admin_get_platform_resources",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "business",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 10000000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AVAdminResourcePage"
+                }
+              }
+            },
+            "description": "Management result. Accepted media changes finish asynchronously."
+          },
+          "400": {
+            "description": "Invalid filter/action or missing idempotency key"
+          },
+          "401": {
+            "description": "Login session required"
+          },
+          "403": {
+            "description": "Management permission denied"
+          },
+          "404": {
+            "description": "Resource not found in the selected organization"
+          },
+          "409": {
+            "description": "Resource state, version or idempotency conflict"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
         ]
       }
     },
@@ -14775,6 +17945,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -14782,7 +17959,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PageRecord"
+                  "$ref": "#/components/schemas/OrganizationDirectoryPage"
                 }
               }
             },

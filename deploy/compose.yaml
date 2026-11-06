@@ -5,7 +5,8 @@ x-app: &app
     context: ..
     dockerfile: deploy/Dockerfile
     additional_contexts:
-      foundation: ../../../platform-foundation/platform-foundation-server
+      foundation: ../../../platform-foundation
+      app: ../../livekit-app
   environment: &environment
     PF_ADDR: 0.0.0.0:8080
     PF_PG_DSN: postgres://av:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/av?sslmode=disable
@@ -13,6 +14,7 @@ x-app: &app
     PF_PUBLIC_ORIGIN: ${PF_PUBLIC_ORIGIN:-http://localhost:18080}
     AV_REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@redis:6379/0
     AV_MEDIA_NODES_FILE: /etc/av/media-nodes.json
+    AV_ADMIN_WEB: /opt/av/admin
   volumes:
     - ./media-nodes.json:/etc/av/media-nodes.json:ro
   restart: unless-stopped

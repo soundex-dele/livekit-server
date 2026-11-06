@@ -133,5 +133,6 @@ func AVOpenAPI() ([]byte, error) {
 		}
 		methods[method] = operation
 	}
+	addAdminOpenAPI(paths, schemas)
 	return json.MarshalIndent(document, "", "  ")
 }

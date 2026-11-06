@@ -9,6 +9,7 @@ AV Platform 的业务服务仓库。
 - [当前架构](docs/architecture-v2.md)：模块、数据所有权、授权、媒体节点及故障语义。
 - [运行与验证](docs/operations-v2.md)：构建、迁移、初始化、部署及验证入口。
 - [验证记录](docs/verification-v2.md)：已通过的自动化检查、复现命令和设备验收边界。
+- [统一运营管理后台](docs/admin.md)：构建与部署、平台／组织治理、四业务管理、媒体节点监控及无窗口验证。
 - [合并契约](api/openapi.json)：Foundation与AV接口；`business-api openapi` 可重新生成。
 
 ## 设计文档

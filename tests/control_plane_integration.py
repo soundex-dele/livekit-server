@@ -44,7 +44,7 @@ def redacted(value):
     return value
 
 
-def request(base: str, path: str, body=None, token="", organization="", credential="", method=None):
+def request(base: str, path: str, body=None, token="", organization="", credential="", method=None, key=""):
     headers = {"Content-Type": "application/json", "X-Foundation-Request": "1"}
     if token:
         headers["Authorization"] = "Bearer " + token
@@ -52,6 +52,8 @@ def request(base: str, path: str, body=None, token="", organization="", credenti
         headers["X-Organization-ID"] = organization
     if credential:
         headers["X-AV-Resource-Credential"] = credential
+    if key:
+        headers["Idempotency-Key"] = key
     data = None if body is None else json.dumps(body).encode()
     req = urllib.request.Request(base + path, data=data, headers=headers, method=method)
     try:
@@ -214,6 +216,7 @@ def run(args):
     report = {"suite": "av-control-plane", "database": "temporary SQLite", "redis": "external isolated test service",
               "checks": [], "real_sfu": True, "real_rtc_signaling": False, "media_packets": False,
               "device_manual_acceptance": False}
+    report["admin_governance"] = args.admin_governance
     prefix = "/api/v1/av/"
     api_port, api2_port, media_port = free_port(), free_port(), free_port()
     api, api2, media = (f"http://127.0.0.1:{port}" for port in (api_port, api2_port, media_port))
@@ -236,6 +239,8 @@ def run(args):
                         "public_url": media.replace("http:", "ws:"), "rtc_key": "rtc", "rtc_secret": rtc_secret,
                         "management_key": "management", "management_secret": management_secret,
                         "admission_secret": admission_secret, "capacity": 100}])})
+        if args.admin_web:
+            env["AV_ADMIN_WEB"] = str(args.admin_web)
         media_env = {**env, "AV_MEDIA_MODE": "true", "AV_NODE_ID": "integration-node", "AV_RTC_KEY": "rtc",
                      "AV_MANAGEMENT_KEY": "management", "AV_ADMISSION_SECRET": admission_secret,
                      "AV_ADMISSION_URL": api + "/internal/v1/media/admissions/check", "AV_ALLOW_INSECURE_ADMISSION": "true"}
@@ -248,15 +253,31 @@ def run(args):
             processes.start("media", [str(args.media), "--config", str(media_config)], media_env)
             eventually(lambda: request(media, "/healthz")[0] == 200, "SFU startup")
             api1_process = processes.start("api-1", [str(args.business), "api"], env)
+            # SQLite's initial journal configuration takes a database lock. Start
+            # replicas in sequence; the test itself still uses both concurrently.
+            eventually(lambda: request(api, "/readyz")[0] == 200, "first API startup")
             processes.start("api-2", [str(args.business), "api"], {**env, "PF_ADDR": f"127.0.0.1:{api2_port}"})
-            processes.start("worker", [str(args.business), "worker"], env)
             eventually(lambda: request(api, "/readyz")[0] == 200 and request(api2, "/readyz")[0] == 200, "two APIs")
+            processes.start("worker", [str(args.business), "worker"], env)
 
             login = request(api, "/api/v1/auth/login", {"name": "integration_owner", "password": password})
             expect(login)
             cookie = http.cookies.SimpleCookie()
             cookie.load(login[2].get("Set-Cookie", ""))
             token = cookie["pf_session"].value
+            platform_token = token
+            if args.admin_governance:
+                # The platform administrator must govern an organization they
+                # never joined and resources they never participated in.
+                owner_login = request(api, "/api/v1/auth/register", {
+                    "name": "integration_org_owner", "password": secrets.token_urlsafe(24)})
+                expect(owner_login)
+                owner_cookie = http.cookies.SimpleCookie()
+                owner_cookie.load(owner_login[2].get("Set-Cookie", ""))
+                token = owner_cookie["pf_session"].value
+                managed = expect(request(api, "/api/v1/organizations", {
+                    "name": "Managed outside platform membership"}, token=token))
+                expect(request(api, prefix + "organizations/initialize", {}, token=token, organization=managed["id"]))
             organizations = expect(request(api2, "/api/v1/organizations", token=token))["items"]
             organization = organizations[0]["id"]
             user = {"token": token, "organization": organization}
@@ -274,6 +295,30 @@ def run(args):
 
             def command(path, body=None, actor=None, base=api):
                 return expect(request(base, prefix + path, {} if body is None else body, **(actor or user)))
+
+            def govern(resource, action, target=None):
+                path = prefix + f"admin/organizations/{organization}/resources/{resource}/actions"
+                body = {"action": action, "reason": "Isolated administrative integration check"}
+                if target:
+                    body["target"] = target
+                key = secrets.token_hex(16)
+                response = expect(request(api2, path, body, token=platform_token, key=key))
+                replay = expect(request(api, path, body, token=platform_token, key=key))
+                assert replay == response, "administrative action must have a stable idempotent response"
+                assert response["accepted"] and response["action_id"]
+                return response
+
+            if args.admin_governance:
+                assert request(api, "/api/v1/context", token=platform_token, organization=organization)[0] == 403
+                context = expect(request(api, f"/api/v1/admin/organizations/{organization}/context", token=platform_token))
+                assert context["organization"] == organization
+                expect(request(api2, prefix + "admin/platform/overview", token=platform_token))
+                nodes = expect(request(api2, prefix + "admin/platform/media-nodes", token=platform_token))
+                encoded = json.dumps(nodes)
+                assert all(secret not in encoded for secret in (rtc_secret, management_secret, admission_secret))
+                assert request(api, prefix + "admin/platform/overview", token=member_token)[0] == 403
+                assert request(api, prefix + f"admin/organizations/{organization}/resources", token=member_token)[0] == 403
+                report["checks"].append("Explicit non-member platform governance; ordinary organization context and member escalation remain denied; node secrets excluded")
 
             def credentials(grant, actor=user):
                 def attempt():
@@ -331,7 +376,7 @@ def run(args):
             assert request(media, "/rtc/validate", token=receiver_media["media_token"])[0] == 200
             report["checks"].append("API restart preserves persisted session, credentials and room binding")
 
-            stopped = command(f"screen-cast/sessions/{cast_id}/stop", base=api2)
+            stopped = govern(cast_id, "end") if args.admin_governance else command(f"screen-cast/sessions/{cast_id}/stop", base=api2)
             assert stopped["accepted"] and stopped["operation_ids"]
             assert request(media, "/rtc/validate", token=receiver_media["media_token"])[0] == 401
             eventually(lambda: room_absent(receiver_media["room"]), "cast cleanup removes actual SFU room")
@@ -361,7 +406,8 @@ def run(args):
                 command(f"remote-control/sessions/{aid}/heartbeat")
                 command(f"remote-control/sessions/{aid}/heartbeat", actor=helper_auth, base=api2)
                 time.sleep(min(2, max(0.01, until - time.monotonic())))
-            assert request(api2, prefix + f"control-grants/{grant['id']}/renew", {"epoch": approval["epoch"]}, **user)[0] in (403, 409)
+            expired_renewal = request(api2, prefix + f"control-grants/{grant['id']}/renew", {"epoch": approval["epoch"]}, **user)
+            assert expired_renewal[0] in (403, 409), f"expired control renewal: {expired_renewal[0]}, {redacted(expired_renewal[1])}"
             assert request(media, "/rtc/validate", token=remote_media["media_token"])[0] == 401
             def new_control():
                 response = request(api2, prefix + f"remote-control/sessions/{aid}/request", {}, **helper_auth)
@@ -369,7 +415,11 @@ def run(args):
             new_request = eventually(new_control, "expired control grant transitions before new approval")
             assert new_request["epoch"] > approval["epoch"]
             command(f"control-grants/{new_request['id']}/approve", {"local_consent": True})
-            command(f"remote-control/sessions/{aid}/stop")
+            if args.admin_governance:
+                govern(aid, "revoke-control")
+                govern(aid, "end")
+            else:
+                command(f"remote-control/sessions/{aid}/stop")
             report["checks"].append("Remote lease expires despite fresh presence; old RTC grant denied; new local approval advances epoch")
 
             meeting = command("conference/meetings", {"title": "Integration meeting"})
@@ -382,12 +432,18 @@ def run(args):
             participant = command(f"conference/meetings/{mid}/connect", actor=attendee_auth, base=api2)
             meeting_media = credentials(participant["grant_id"], attendee_auth)
             signal(meeting_media)
-            command(f"conference/meetings/{mid}/mute", {"target": attendee["subject_id"], "enabled": True})
+            if args.admin_governance:
+                govern(mid, "mute", attendee["subject_id"])
+            else:
+                command(f"conference/meetings/{mid}/mute", {"target": attendee["subject_id"], "enabled": True})
             assert request(media, "/rtc/validate", token=meeting_media["media_token"])[0] == 401
             updated = command(f"conference/meetings/{mid}/connect", actor=attendee_auth)
             updated_media = credentials(updated["grant_id"], attendee_auth)
             assert "microphone" not in updated_media["granted_capabilities"]["sources"]
-            command(f"conference/meetings/{mid}/end")
+            if args.admin_governance:
+                govern(mid, "end")
+            else:
+                command(f"conference/meetings/{mid}/end")
             report["checks"].append("Meeting waiting room approval, real signaling, policy revision revokes prior publishing token")
 
             room = command("live-studio/rooms", {"title": "Integration live"})
@@ -397,7 +453,10 @@ def run(args):
             viewer_auth = {"credential": viewer["credential"]}
             live_media = credentials(viewer["grant_id"], viewer_auth)
             signal(live_media)
-            command(f"live-studio/broadcasts/{bid}/end")
+            if args.admin_governance:
+                govern(bid, "end")
+            else:
+                command(f"live-studio/broadcasts/{bid}/end")
             assert request(media, "/rtc/validate", token=live_media["media_token"])[0] == 401
             eventually(lambda: room_absent(live_media["room"]), "live cleanup")
             report["checks"].append("WebRTC live broadcast program/stage creation, anonymous watch, signaling and end cleanup")
@@ -407,7 +466,8 @@ def run(args):
                 media_test = processes.start("synthetic-media", [args.node, str(args.media_script)], {**env, "AV_SMOKE_API": api,
                     "AV_SMOKE_API2": api2, "AV_SMOKE_MEDIA": media.replace("http:", "ws:"), "AV_SMOKE_TOKEN": token,
                     "AV_SMOKE_ORGANIZATION": organization, "AV_SMOKE_MEMBER_TOKEN": member_token,
-                    "AV_SMOKE_MEMBER_ID": member_id, "AV_SMOKE_OUTPUT": str(media_report)})
+                    "AV_SMOKE_MEMBER_ID": member_id, "AV_SMOKE_OUTPUT": str(media_report),
+                    "AV_SMOKE_ADMIN_TOKEN": platform_token if args.admin_governance else ""})
                 try:
                     media_test.wait(timeout=240)
                 except subprocess.TimeoutExpired:
@@ -417,16 +477,34 @@ def run(args):
                 report["synthetic_media"] = json.loads(media_report.read_text(encoding="utf-8"))
                 report["media_packets"] = True
                 report["checks"].append("Synthetic WebRTC audio/video packets and decoded frames, verified by headless browser fixture")
+            if args.admin_ui_script:
+                ui_meeting = command("conference/meetings", {"title": "Admin UI governance meeting"})
+                ui_report = temp / "admin-ui.json"
+                ui_test = processes.start("admin-ui", [args.node, str(args.admin_ui_script)], {
+                    **env, "AV_ADMIN_TEST_URL": api, "AV_ADMIN_TEST_NAME": "integration_owner",
+                    "AV_ADMIN_TEST_PASSWORD": password, "AV_ADMIN_TEST_ORGANIZATION": organization,
+                    "AV_ADMIN_TEST_RESOURCE": ui_meeting["id"],
+                    "AV_ADMIN_TEST_OUTPUT": str(ui_report),
+                    "AV_CHROME_PATH": os.environ.get("AV_CHROME_PATH", "")})
+                ui_test.wait(timeout=180)
+                if ui_report.exists():
+                    report["admin_ui"] = json.loads(ui_report.read_text(encoding="utf-8"))
+                assert ui_test.returncode == 0, "admin UI fixture failed: " + (temp / "admin-ui.log").read_text(encoding="utf-8", errors="replace")[-5000:]
+                assert report["admin_ui"]["passed"], "admin UI fixture reported failure"
+                ui_state = expect(request(api, prefix + f"conference/meetings/{ui_meeting['id']}", **user))
+                assert ui_state["meeting"]["state"] == "ended", "UI governance must update actual business state"
+                report["checks"].append("Deployed admin UI: real login, platform and organization pages, scoped requests")
             report["passed"] = True
         except BaseException as error:
             report["passed"] = False
             report["error"] = f"{type(error).__name__}: {error}"
-            partial_media = temp / "synthetic-media.json"
-            if partial_media.exists():
-                try:
-                    report["synthetic_media"] = json.loads(partial_media.read_text(encoding="utf-8"))
-                except (OSError, json.JSONDecodeError):
-                    pass
+            for key, filename in (("synthetic_media", "synthetic-media.json"), ("admin_ui", "admin-ui.json")):
+                partial = temp / filename
+                if partial.exists():
+                    try:
+                        report[key] = json.loads(partial.read_text(encoding="utf-8"))
+                    except (OSError, json.JSONDecodeError):
+                        pass
             if args.output:
                 args.output.parent.mkdir(parents=True, exist_ok=True)
                 args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -462,6 +540,9 @@ if __name__ == "__main__":
     parser.add_argument("--media", type=Path, default=root.parent / "livekit-cpp/out/windows-x64/Release/livekit-server.exe")
     parser.add_argument("--redis-url", default=os.environ.get("AV_TEST_REDIS_URL", ""))
     parser.add_argument("--media-script", type=Path)
+    parser.add_argument("--admin-governance", action="store_true")
+    parser.add_argument("--admin-web", type=Path)
+    parser.add_argument("--admin-ui-script", type=Path)
     parser.add_argument("--node", default="node")
     parser.add_argument("--output", type=Path, default=root / "out/control-plane-integration.json")
     options = parser.parse_args()
@@ -470,4 +551,10 @@ if __name__ == "__main__":
     options.business, options.media = options.business.resolve(), options.media.resolve()
     if options.media_script:
         options.media_script = options.media_script.resolve()
+    if options.admin_web:
+        options.admin_web = options.admin_web.resolve()
+    if options.admin_ui_script:
+        if not options.admin_governance or not options.admin_web:
+            parser.error("--admin-ui-script requires --admin-governance and --admin-web")
+        options.admin_ui_script = options.admin_ui_script.resolve()
     run(options)

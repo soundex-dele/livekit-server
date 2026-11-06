@@ -385,7 +385,10 @@ func (s *Platform) operation(ctx context.Context, t *persistence.Tx, b binding, 
 		return "", e
 	}
 	body, _ := json.Marshal(map[string]string{"operation_id": id})
-	_, e := s.Queue.Submit(ctx, t, "system", taskqueue.Spec{Kind: "job", Type: "av.media", Key: id, Payload: body, MaxAttempts: 10})
+	job, e := s.Queue.Submit(ctx, t, "system", taskqueue.Spec{Kind: "job", Type: "av.media", Key: id, Payload: body, MaxAttempts: 10})
+	if e == nil {
+		_, e = t.Exec(ctx, "UPDATE av_media_operations SET job_id=? WHERE scope=? AND id=?", job, t.Scope, id)
+	}
 	return id, e
 }
 func (s *Platform) Revoke(ctx context.Context, t *persistence.Tx, resource, subject string) error {

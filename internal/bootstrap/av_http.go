@@ -109,7 +109,11 @@ func (a *AVApp) Handler() http.Handler {
 		avReply(w, 200, map[string]bool{"ready": true})
 	})
 	mux.HandleFunc("GET /api/v1/av/capabilities", func(w http.ResponseWriter, r *http.Request) {
-		avReply(w, 200, map[string]any{"modules": a.Config.Businesses, "organization_required": true, "api_version": "1", "media_protocol": "av_grant"})
+		adminURL := ""
+		if a.Config.AdminWeb != "" {
+			adminURL = "/apps/admin/"
+		}
+		avReply(w, 200, map[string]any{"modules": a.Config.Businesses, "organization_required": true, "api_version": "1", "media_protocol": "av_grant", "admin_url": adminURL})
 	})
 	mux.HandleFunc("POST /api/v1/av/organizations/initialize", func(w http.ResponseWriter, r *http.Request) {
 		actor, e := a.Foundation.AuthenticateRequest(r)
@@ -163,7 +167,11 @@ func (a *AVApp) Handler() http.Handler {
 		fmt.Fprintf(w, "av_http_requests_total %d\nav_http_failures_total %d\nav_websocket_connections %d\n", a.requests.Load(), a.failures.Load(), a.connections.Load())
 	})
 	mux.HandleFunc("POST /internal/v1/media/admissions/check", a.admission)
+	mux.HandleFunc("/api/v1/av/admin/", a.admin)
 	mux.HandleFunc("/api/v1/av/", a.business)
+	if a.Config.AdminWeb != "" {
+		mux.Handle("/apps/admin/", http.StripPrefix("/apps/admin/", http.FileServer(http.Dir(a.Config.AdminWeb))))
+	}
 	for name, root := range a.Config.Web {
 		if root != "" && a.Config.Enabled(name) {
 			prefix := "/apps/" + name + "/"

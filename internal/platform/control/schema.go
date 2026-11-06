@@ -29,6 +29,20 @@ CREATE TABLE av_media_operations(id TEXT PRIMARY KEY,scope TEXT NOT NULL,resourc
 CREATE INDEX av_media_operations_pending ON av_media_operations(state,updated);
 `
 
+// Keep the first two migration checksums stable for deployed databases.
+const adminSchema = `
+ALTER TABLE av_media_operations ADD COLUMN job_id TEXT NOT NULL DEFAULT '';
+CREATE TABLE av_admin_actions(id TEXT PRIMARY KEY,scope TEXT NOT NULL,resource_id TEXT NOT NULL,actor TEXT NOT NULL,action TEXT NOT NULL,target TEXT NOT NULL,reason TEXT NOT NULL,operation_ids TEXT NOT NULL,created BIGINT NOT NULL);
+CREATE INDEX av_admin_actions_resource ON av_admin_actions(scope,resource_id,created,id);
+CREATE INDEX av_resources_admin ON av_resources(scope,kind,created,id);
+CREATE INDEX av_resources_platform_admin ON av_resources(kind,created,id);
+CREATE INDEX av_media_operations_admin ON av_media_operations(scope,state,created,id);
+`
+
+func migrationSteps(businessSchema string) []string {
+	return []string{Schema, businessSchema, adminSchema}
+}
+
 // Migrate is explicit and checksum-checked. Startup only calls CheckSchema.
 func Migrate(ctx context.Context, s *persistence.Store, businessSchema string) error {
 	if e := s.Migrate(ctx); e != nil {
@@ -38,7 +52,7 @@ func Migrate(ctx context.Context, s *persistence.Store, businessSchema string) e
 		return e
 	}
 	return s.Within(ctx, "app", func(t *persistence.Tx) error {
-		for i, ddl := range []string{Schema, businessSchema} {
+		for i, ddl := range migrationSteps(businessSchema) {
 			checksum := fmt.Sprintf("%x", sha256.Sum256([]byte(ddl)))
 			var got string
 			e := t.Row(ctx, "SELECT checksum FROM av_schema WHERE version=?", i+1).Scan(&got)
@@ -68,12 +82,12 @@ func Migrate(ctx context.Context, s *persistence.Store, businessSchema string) e
 }
 func CheckSchema(ctx context.Context, s *persistence.Store, business ...string) error {
 	var n int
-	if e := s.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM av_schema").Scan(&n); e != nil || n != 2 {
+	if e := s.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM av_schema").Scan(&n); e != nil || n != 3 {
 		return fmt.Errorf("run business-api migrate before startup")
 	}
 	steps := []string{Schema}
 	if len(business) > 0 {
-		steps = append(steps, business[0])
+		steps = migrationSteps(business[0])
 	}
 	for i, ddl := range steps {
 		var got string

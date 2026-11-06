@@ -33,6 +33,8 @@ docker compose --env-file deploy/.env -f deploy/compose.yaml run --rm -e PF_ADMI
 
 Compose的API默认仅绑定本机18080，生产在HTTPS代理后发布。SFU和TURN独立部署，按客户端可达地址及实际网络配置ICE。增加Worker副本可并发领取任务；API多副本应移除单实例固定宿主端口映射，由负载均衡统一接入。业务节点共享PG/Redis和同一配置，不使用粘性会话保证正确性。
 
+API 镜像包含 `/apps/admin/` 统一运营后台；本机构建可通过 `AV_ADMIN_WEB` 指定后台 `dist`。管理页面与 API 同源，使用现有账号登录。平台管理员的跨组织治理使用独立管理入口，不改变普通客户端的成员校验。构建、页面权限和升级步骤见[后台运行说明](admin.md)。
+
 `/healthz` 检查进程，`/readyz` 检查PG/Redis，`/api/v1/av/metrics` 需要业务治理权限。关注请求失败率、队列积压/失败、数据库事务等待、媒体准入拒绝及节点状态。日志不包含票据、请求正文或原始媒体Token。
 
 ## 故障处理
