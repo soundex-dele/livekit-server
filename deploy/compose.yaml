@@ -1,0 +1,65 @@
+name: av-control
+x-app: &app
+  image: av-business:local
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+    additional_contexts:
+      foundation: ../../../platform-foundation/platform-foundation-server
+  environment: &environment
+    PF_ADDR: 0.0.0.0:8080
+    PF_PG_DSN: postgres://av:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/av?sslmode=disable
+    PF_MODULES: organizations,jobs,events
+    PF_PUBLIC_ORIGIN: ${PF_PUBLIC_ORIGIN:-http://localhost:18080}
+    AV_REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@redis:6379/0
+    AV_MEDIA_NODES_FILE: /etc/av/media-nodes.json
+  volumes:
+    - ./media-nodes.json:/etc/av/media-nodes.json:ro
+  restart: unless-stopped
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: av
+      POSTGRES_DB: av
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U av -d av']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+  redis:
+    image: redis:7-alpine
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    command: [/bin/sh, -c, 'exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly no --save ""']
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+  migrate:
+    <<: *app
+    command: [migrate]
+    restart: "no"
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+  api:
+    <<: *app
+    command: [api]
+    ports:
+      - 127.0.0.1:18080:8080
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  worker:
+    <<: *app
+    command: [worker]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+volumes:
+  postgres:

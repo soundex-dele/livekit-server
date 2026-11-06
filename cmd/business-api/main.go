@@ -3,32 +3,67 @@ package main
 import (
 	"av-platform/business/internal/bootstrap"
 	"context"
-	"flag"
-	"log"
+	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
+	"platform-foundation/server/telemetry"
+	"syscall"
+	"time"
 )
 
 func main() {
-	var cfg bootstrap.Config
-	flag.StringVar(&cfg.Listen, "listen", "127.0.0.1:8080", "HTTP bind address")
-	flag.StringVar(&cfg.Database, "db", "remote-control.sqlite", "SQLite path")
-	flag.StringVar(&cfg.RemoteControlWeb, "remote-control-web", "../livekit-app/apps/remote-control/web/dist", "Remote-control Web build directory; empty disables serving")
-	flag.StringVar(&cfg.ScreenCastWeb, "screen-cast-web", "../livekit-app/apps/screen-cast/web/dist", "Screen-cast Web build directory; empty disables serving")
-	flag.BoolVar(&cfg.EnableConference, "conference", false, "Enable AV Meeting and shared accounts")
-	flag.BoolVar(&cfg.EnableLiveStudio, "live-studio", false, "Enable live studio and account APIs")
-	flag.StringVar(&cfg.LiveStudioWeb, "live-studio-web", "../livekit-app/apps/live-studio/web/dist", "Live studio Web build directory")
-	flag.StringVar(&cfg.MediaAPI, "media-api", "http://127.0.0.1:7880", "Trusted media API URL")
-	flag.StringVar(&cfg.MediaURL, "media-url", "ws://127.0.0.1:7880", "Client-visible media URL")
-	flag.StringVar(&cfg.TLSCert, "tls-cert", "", "Optional HTTPS certificate")
-	flag.StringVar(&cfg.TLSKey, "tls-key", "", "Optional HTTPS private key")
-	flag.Parse()
-	cfg.APIKey, cfg.APISecret = os.Getenv("LIVEKIT_API_KEY"), os.Getenv("LIVEKIT_API_SECRET")
-	cfg.ConferenceAdmissionSecret = os.Getenv("CONFERENCE_ADMISSION_SECRET")
-	cfg.StudioAdmissionSecret = os.Getenv("LIVE_STUDIO_ADMISSION_SECRET")
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	if e := run(); e != nil {
+		slog.Error("business service stopped", "error", e)
+		os.Exit(1)
+	}
+}
+func run() error {
+	command := "serve"
+	if len(os.Args) > 1 {
+		command = os.Args[1]
+	}
+	if command == "openapi" {
+		raw, e := bootstrap.AVOpenAPI()
+		if e == nil {
+			_, e = os.Stdout.Write(append(raw, '\n'))
+		}
+		return e
+	}
+	c, e := bootstrap.LoadAVConfig()
+	if e != nil {
+		return e
+	}
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	if err := bootstrap.Run(ctx, cfg); err != nil {
-		log.Fatal(err)
+	if command == "migrate" {
+		return bootstrap.MigrateAV(ctx, c)
+	}
+	stop, e := telemetry.Start(ctx)
+	if e != nil {
+		return e
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = stop(ctx)
+	}()
+	a, e := bootstrap.NewAV(c, nil)
+	if e != nil {
+		return e
+	}
+	defer a.Close()
+	switch command {
+	case "api":
+		return a.Serve(ctx, false)
+	case "serve":
+		return a.Serve(ctx, true)
+	case "worker":
+		return a.Foundation.Workers(ctx)
+	case "bootstrap":
+		return a.Bootstrap(ctx, os.Getenv("PF_ADMIN_NAME"), os.Getenv("PF_ADMIN_PASSWORD"), os.Getenv("AV_ORGANIZATION_NAME"))
+	default:
+		return fmt.Errorf("unknown command %q; use migrate, bootstrap, api, worker, serve, openapi", command)
 	}
 }

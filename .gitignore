@@ -8,5 +8,9 @@ Thumbs.db
 /dist/
 /node_modules/
 /.venv/
+__pycache__/
+*.pyc
 *.log
 /remote-control.sqlite*
+/deploy/media-nodes.json
+/deploy/.env

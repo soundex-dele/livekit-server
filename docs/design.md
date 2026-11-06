@@ -1,5 +1,7 @@
 # livekit-server 业务服务设计
 
+> 历史设计。当前 Foundation 装配、组织隔离与 `/api/v1/av` 协议见 [多业务控制面](architecture-v2.md)；下文不代表新入口的实现状态。
+
 实现补充：首版远控业务服务采用 Go + SQLite，后续通过仓储接口迁移 PostgreSQL；使用临时配对，不包含账号体系。已实现部分及验证边界见 [远控运行文档](../../docs/integration/remote-control/README.md)，下文保留完整平台的目标设计。
 
 版本：v0.1；日期：2026-10-26；状态：远控业务已实现，其他业务按需扩展。

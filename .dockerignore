@@ -1,0 +1,7 @@
+out
+.git
+*.sqlite*
+*.db*
+.env
+deploy/.env
+deploy/media-nodes.json

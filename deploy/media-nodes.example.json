@@ -1,0 +1,13 @@
+[
+  {
+    "id": "media-1",
+    "api_url": "https://media-1.internal.example:7880",
+    "public_url": "wss://media.example.com",
+    "rtc_key": "av-rtc",
+    "rtc_secret": "REPLACE_WITH_RANDOM_RTC_SECRET_AT_LEAST_32_BYTES",
+    "management_key": "av-management",
+    "management_secret": "REPLACE_WITH_DIFFERENT_MANAGEMENT_SECRET_AT_LEAST_32_BYTES",
+    "admission_secret": "REPLACE_WITH_RANDOM_ADMISSION_SECRET_AT_LEAST_32_BYTES",
+    "capacity": 100
+  }
+]
